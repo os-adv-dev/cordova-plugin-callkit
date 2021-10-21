@@ -2,9 +2,24 @@
 
 @implementation AppDelegate (CordovaCall)
 
+NSString *deepLink;
+
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     
     NSLog(@"Push notification fetch");
+    
+    
+    deepLink = [userInfo objectForKey:@"l"];
+    
+    NSError *error;
+    NSString *meetingDetailsJson = [userInfo objectForKey:@"u"];
+    NSData *jsonData = [meetingDetailsJson dataUsingEncoding:NSUTF8StringEncoding];
+    NSMutableDictionary *data = [NSJSONSerialization JSONObjectWithData:jsonData
+                                                       options:NSJSONReadingAllowFragments
+                                                         error:&error];
+    
+    //NSString *displayName = [data objectForKey:@"DisplayName"];
+    NSString *displayName = @"test";
     
     NSUUID *callUUID = [[NSUUID alloc] init];
     
@@ -12,7 +27,7 @@
     CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
     callUpdate.remoteHandle = handle;
     callUpdate.hasVideo = YES;
-    callUpdate.localizedCallerName = @"test";
+    callUpdate.localizedCallerName = displayName;
     callUpdate.supportsGrouping = NO;
     callUpdate.supportsUngrouping = NO;
     callUpdate.supportsHolding = NO;
@@ -31,15 +46,57 @@
         providerConfiguration.includesCallsInRecents = NO;
     }
     CXProvider *provider = [[CXProvider alloc] initWithConfiguration:providerConfiguration];
+    //self.provider = [[CXProvider alloc] initWithConfiguration:providerConfiguration];
     
+    if (error) {
+        NSLog(@"Got an error: %@", error);
+    } else {
+        NSLog(@"%@", data);
+    }
+    
+    [provider setDelegate:self queue:nil];
     [provider reportNewIncomingCallWithUUID:callUUID update:callUpdate completion:^(NSError * _Nullable error) {
+        
         if(error == nil) {
+            //if ([[UIApplication sharedApplication] applicationState] !=  UIApplicationStateActive){
+            //CordovaCall *cordovaCall = [CordovaCall sharedInstance];
+            //[cordovaCall.provider answer]
+                
+               
+            //}
             //[self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Incoming call successful"] callbackId:command.callbackId];
         } else {
             //[self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]] callbackId:command.callbackId];
         }
     }];
     
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application{
+    if (openDeeplink){
+        UIApplication *application = [UIApplication sharedApplication];
+        if (application.applicationState == UIApplicationStateBackground){
+            NSLog(@"App is in background...");
+        }
+        
+        NSURL *URL = [NSURL URLWithString:deepLink];
+        [application openURL:URL options:@{} completionHandler:^(BOOL success) {
+            if (success) {
+                 NSLog(@"Opened url");
+            }
+        }];
+        openDeeplink = false;
+    }
+}
+
+bool openDeeplink = false;
+
+- (void)provider:(CXProvider *)provider performAnswerCallAction:(CXAnswerCallAction *)action
+{
+    [action fulfill];
+    openDeeplink = true;
+    
+    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"openZoom"];
 }
 
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray *restorableObjects))restorationHandler

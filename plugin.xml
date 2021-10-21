@@ -4,17 +4,17 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Cordova CallKit</name>
 
-    <js-module name="VoIPPushNotification" src="www/VoIPPushNotification.js">
+    <!--<js-module name="VoIPPushNotification" src="www/VoIPPushNotification.js">
         <clobbers target="VoIPPushNotification" />
-    </js-module>
+    </js-module>-->
 
     <js-module name="CordovaCall" src="www/CordovaCall.js">
         <clobbers target="cordova.plugins.CordovaCall" />
     </js-module>
 
-    <js-module src="www/PushNotification.js" name="PushNotification">
+    <!--<js-module src="www/PushNotification.js" name="PushNotification">
 		<clobbers target="PushNotification" />
-	</js-module>
+	</js-module>-->
 
     <platform name="android">
 
