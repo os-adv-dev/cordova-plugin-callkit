@@ -11,9 +11,14 @@
 
 - (void)init:(CDVInvokedUrlCommand*)command;
 
+// Public static method
++ (CordovaCall*) sharedInstance;
+
 // CallKit
 @property (nonatomic, strong) CXProvider *provider;
 @property (nonatomic, strong) CXCallController *callController;
+
+- (void)callAnswerCallbacks;
 
 - (void)updateProviderConfig;
 - (void)setupAudioSession;

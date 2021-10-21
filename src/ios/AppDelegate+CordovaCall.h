@@ -7,5 +7,6 @@
 #import <PushKit/PushKit.h>
 #import <objc/runtime.h>
 
-@interface AppDelegate (CordovaCall) <UIApplicationDelegate>
+@interface AppDelegate (CordovaCall) <UIApplicationDelegate, CXProviderDelegate>
+
 @end

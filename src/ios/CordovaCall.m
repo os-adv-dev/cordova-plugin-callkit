@@ -17,8 +17,17 @@ BOOL monitorAudioRouteChange = NO;
 BOOL enableDTMF = NO;
 PKPushRegistry *_voipRegistry;
 
+// private static reference
+static CordovaCall* sharedInstance;
+
+// Public static method
++ (CordovaCall*) sharedInstance {
+    return sharedInstance;
+}
+
 - (void)pluginInitialize
 {
+    sharedInstance = self;
     CXProviderConfiguration *providerConfiguration;
     appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
     providerConfiguration = [[CXProviderConfiguration alloc] initWithLocalizedName:appName];
@@ -485,6 +494,15 @@ PKPushRegistry *_voipRegistry;
         [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
     }
     //[action fail];
+}
+
+- (void) callAnswerCallbacks{
+    for (id callbackId in callbackIds[@"answer"]) {
+        CDVPluginResult* pluginResult = nil;
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"answer event called successfully"];
+        [pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+    }
 }
 
 - (void)provider:(CXProvider *)provider performEndCallAction:(CXEndCallAction *)action

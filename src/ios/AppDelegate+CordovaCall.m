@@ -1,15 +1,15 @@
 #import "AppDelegate+CordovaCall.h"
+#import "CordovaCall.h"
 
 @implementation AppDelegate (CordovaCall)
 
-NSString *deepLink;
+NSString *meetingNumber;
+NSString *meetingPassword;
+
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     
     NSLog(@"Push notification fetch");
-    
-    
-    deepLink = [userInfo objectForKey:@"l"];
     
     NSError *error;
     NSString *meetingDetailsJson = [userInfo objectForKey:@"u"];
@@ -18,12 +18,13 @@ NSString *deepLink;
                                                        options:NSJSONReadingAllowFragments
                                                          error:&error];
     
-    //NSString *displayName = [data objectForKey:@"DisplayName"];
-    NSString *displayName = @"test";
+    meetingNumber = [data objectForKey:@"MeetingNumber"];
+    meetingPassword = [data objectForKey:@"MeetingPassword"];
+    NSString *displayName = [data objectForKey:@"DisplayName"];
     
     NSUUID *callUUID = [[NSUUID alloc] init];
     
-    CXHandle *handle = [[CXHandle alloc] initWithType:CXHandleTypePhoneNumber value:@"1"];
+    CXHandle *handle = [[CXHandle alloc] initWithType:CXHandleTypePhoneNumber value:meetingNumber];
     CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
     callUpdate.remoteHandle = handle;
     callUpdate.hasVideo = YES;
@@ -46,7 +47,6 @@ NSString *deepLink;
         providerConfiguration.includesCallsInRecents = NO;
     }
     CXProvider *provider = [[CXProvider alloc] initWithConfiguration:providerConfiguration];
-    //self.provider = [[CXProvider alloc] initWithConfiguration:providerConfiguration];
     
     if (error) {
         NSLog(@"Got an error: %@", error);
@@ -56,48 +56,34 @@ NSString *deepLink;
     
     [provider setDelegate:self queue:nil];
     [provider reportNewIncomingCallWithUUID:callUUID update:callUpdate completion:^(NSError * _Nullable error) {
-        
         if(error == nil) {
-            //if ([[UIApplication sharedApplication] applicationState] !=  UIApplicationStateActive){
-            //CordovaCall *cordovaCall = [CordovaCall sharedInstance];
-            //[cordovaCall.provider answer]
-                
-               
-            //}
-            //[self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Incoming call successful"] callbackId:command.callbackId];
+            NSLog(@"Phone is ringing!");
         } else {
-            //[self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]] callbackId:command.callbackId];
+            NSLog(@"An error occoured starting the call");
         }
     }];
     
 }
 
-- (void)applicationDidBecomeActive:(UIApplication *)application{
-    if (openDeeplink){
-        UIApplication *application = [UIApplication sharedApplication];
-        if (application.applicationState == UIApplicationStateBackground){
-            NSLog(@"App is in background...");
-        }
-        
-        NSURL *URL = [NSURL URLWithString:deepLink];
-        [application openURL:URL options:@{} completionHandler:^(BOOL success) {
-            if (success) {
-                 NSLog(@"Opened url");
-            }
-        }];
-        openDeeplink = false;
-    }
-}
-
-bool openDeeplink = false;
-
 - (void)provider:(CXProvider *)provider performAnswerCallAction:(CXAnswerCallAction *)action
 {
     [action fulfill];
-    openDeeplink = true;
+    UIApplication *application = [UIApplication sharedApplication];
+    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"CallAnsweredByUser"];
+    [[NSUserDefaults standardUserDefaults] setValue:meetingNumber forKey:@"MeetingNumber"];
+    [[NSUserDefaults standardUserDefaults] setValue:meetingPassword forKey:@"MeetingPassword"];
     
-    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"openZoom"];
+    if (application.applicationState == UIApplicationStateActive){
+        CordovaCall *cordovaCall = [CordovaCall sharedInstance];
+        [cordovaCall callAnswerCallbacks];
+    }
+    
 }
+
+- (void)providerDidReset:(nonnull CXProvider *)provider { 
+    NSLog(@"%s","providerdidreset");
+}
+
 
 - (BOOL)application:(UIApplication *)application continueUserActivity:(NSUserActivity *)userActivity restorationHandler:(void (^)(NSArray *restorableObjects))restorationHandler
 {
