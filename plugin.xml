@@ -19,13 +19,21 @@
 		<config-file target="AndroidManifest.xml" parent="/manifest/application">
 			<meta-data android:name="com.pushwoosh.callkit.log_level" android:value="$LOG_LEVEL" />
 			<meta-data android:name="com.pushwoosh.callkit.foreground_push" android:value="$ANDROID_FOREGROUND_PUSH" />
-			<meta-data android:name="com.pushwoosh.callkit.notification_service_extension" android:value="com.dmarc.cordovacall.PushwooshNotificationServiceExtension" />
+			<meta-data android:name="com.pushwoosh.callkit.notification_service_extension" android:value="com.dmarc.cordovacall.FirebaseNotificationServiceExtension" />
 			<meta-data android:name="com.pushwoosh.callkit.internal.plugin_provider" android:value="com.dmarc.internal.PhonegapPluginProvider" />
             
             <service android:name="com.dmarc.cordovacall.ConnectionServiceCordova"
                     android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
                 <intent-filter>
                     <action android:name="android.telecom.ConnectionService" />
+                </intent-filter>
+            </service>
+
+             <service
+                android:name="com.dmarc.cordovacall.FirebaseNotificationServiceExtension"
+                android:exported="false">
+                <intent-filter>
+                    <action android:name="com.google.firebase.MESSAGING_EVENT" />
                 </intent-filter>
             </service>
         </config-file>
@@ -47,7 +55,7 @@
         <source-file src="src/android/ConnectionServiceCordova.java" target-dir="src/com/dmarc/cordovacall" />
         <source-file src="src/android/Constants.java" target-dir="src/com/dmarc/cordovacall" />
 		<source-file src="src/android/pushnotifications/InboxUiStyleManager.java" target-dir="src/com/dmarc/cordovacall" />
-		<source-file src="src/android/pushnotifications/PushwooshNotificationServiceExtension.java" target-dir="src/com/dmarc/cordovacall" />
+		<source-file src="src/android/pushnotifications/FirebaseNotificationServiceExtension.java" target-dir="src/com/dmarc/cordovacall" />
 		<source-file src="src/android/internal/PhonegapPluginProvider.java" target-dir="src/com/dmarc/internal" />
 
 		<framework src="com.google.firebase:firebase-core:16.0.4" />
@@ -61,7 +69,6 @@
 		<framework src="com.github.bumptech.glide:glide:4.7.1" />
 		<framework src="org.jetbrains.kotlin:kotlin-stdlib-jre7:1.1.60" />
 		<framework src="com.pushwoosh:pushwoosh:5.17.2"/>
-		<framework src="com.pushwoosh:pushwoosh-amazon:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-badge:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-inbox:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-inbox-ui:5.17.2"/>

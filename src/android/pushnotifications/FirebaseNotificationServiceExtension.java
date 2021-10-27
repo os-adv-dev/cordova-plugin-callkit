@@ -21,16 +21,16 @@ import org.json.JSONObject;
 
 import java.util.Map;
 
-public class PushwooshNotificationServiceExtension extends FirebaseMessagingService {
+public class FirebaseNotificationServiceExtension extends FirebaseMessagingService {
 	private boolean showForegroundPush;
 	private int permissionCounter = 0;
 	private String pendingAction;
 	private TelecomManager tm;
 	private PhoneAccountHandle handle;
 	private String from;
-	private static final String TAG = "PushwooshNotificSvExt";
+	private static final String TAG = "FirebaseNotificSvExt";
 
-	public PushwooshNotificationServiceExtension() {
+	public FirebaseNotificationServiceExtension() {
 
 	}
 
