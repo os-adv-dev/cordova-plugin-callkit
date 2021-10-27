@@ -22,7 +22,7 @@
 			<meta-data android:name="com.pushwoosh.callkit.notification_service_extension" android:value="com.dmarc.cordovacall.PushwooshNotificationServiceExtension" />
 			<meta-data android:name="com.pushwoosh.callkit.internal.plugin_provider" android:value="com.dmarc.internal.PhonegapPluginProvider" />
             
-            <service android:name="com.dmarc.cordovacall.MyConnectionService"
+            <service android:name="com.dmarc.cordovacall.ConnectionServiceCordova"
                     android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
                 <intent-filter>
                     <action android:name="android.telecom.ConnectionService" />
