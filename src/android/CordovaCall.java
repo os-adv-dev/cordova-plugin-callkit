@@ -122,7 +122,6 @@ public class CordovaCall extends CordovaPlugin {
         cordovaInterface = cordova;
         cordovaWebView = webView;
         super.initialize(cordova, webView);
-        this.checkCallPermission();
         appName = getApplicationName(this.cordova.getActivity().getApplicationContext());
         handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(), ConnectionServiceCordova.class),appName);
         tm = (TelecomManager)this.cordova.getActivity().getApplicationContext().getSystemService(this.cordova.getActivity().getApplicationContext().TELECOM_SERVICE);
