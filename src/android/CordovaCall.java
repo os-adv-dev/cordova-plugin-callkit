@@ -6,6 +6,10 @@ import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 
+import android.app.Activity;
+import android.app.KeyguardManager;
+import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,12 +29,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import android.graphics.drawable.Icon;
@@ -39,11 +40,11 @@ import android.media.AudioManager;
 import com.pushwoosh.Pushwoosh;
 import com.pushwoosh.internal.utils.PWLog;
 
-import android.app.Activity;
 import androidx.annotation.NonNull;
 import androidx.core.app.NotificationManagerCompat;
 
-import android.provider.Settings;
+import android.util.Log;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 
 import com.pushwoosh.GDPRManager;
@@ -65,10 +66,6 @@ import com.pushwoosh.notification.SoundType;
 import com.pushwoosh.notification.VibrateType;
 import com.pushwoosh.tags.Tags;
 import com.pushwoosh.tags.TagsBundle;
-
-
-import static android.os.Build.VERSION.SDK_INT;
-import static android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION;
 
 public class CordovaCall extends CordovaPlugin {
 
@@ -126,15 +123,15 @@ public class CordovaCall extends CordovaPlugin {
         cordovaWebView = webView;
         super.initialize(cordova, webView);
         appName = getApplicationName(this.cordova.getActivity().getApplicationContext());
-        handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(),MyConnectionService.class),appName);
+        handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(), ConnectionServiceCordova.class),appName);
         tm = (TelecomManager)this.cordova.getActivity().getApplicationContext().getSystemService(this.cordova.getActivity().getApplicationContext().TELECOM_SERVICE);
-        if(android.os.Build.VERSION.SDK_INT >= 26) {
+        if(Build.VERSION.SDK_INT >= 26) {
           phoneAccount = new PhoneAccount.Builder(handle, appName)
                   .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
                   .build();
           tm.registerPhoneAccount(phoneAccount);
         }
-        if(android.os.Build.VERSION.SDK_INT >= 23) {
+        if(Build.VERSION.SDK_INT >= 23) {
           phoneAccount = new PhoneAccount.Builder(handle, appName)
                    .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
                    .build();
@@ -156,13 +153,19 @@ public class CordovaCall extends CordovaPlugin {
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        this.checkKeyguard();
+    }
+
+    @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         this.callbackContext = callbackContext;
 
         PWLog.debug(TAG, "Plugin Method Called: " + action);
 
         if (action.equals("receiveCall")) {
-            Connection conn = MyConnectionService.getConnection();
+            Connection conn = ConnectionServiceCordova.getConnection();
             if(conn != null) {
                 if(conn.getState() == Connection.STATE_ACTIVE) {
                     this.callbackContext.error("You can't receive a call right now because you're already in a call");
@@ -177,7 +180,7 @@ public class CordovaCall extends CordovaPlugin {
             }
             return true;
         } else if (action.equals("sendCall")) {
-            Connection conn = MyConnectionService.getConnection();
+            Connection conn = ConnectionServiceCordova.getConnection();
             if(conn != null) {
                 if(conn.getState() == Connection.STATE_ACTIVE) {
                     this.callbackContext.error("You can't make a call right now because you're already in a call");
@@ -199,7 +202,7 @@ public class CordovaCall extends CordovaPlugin {
             }
             return true;
         } else if (action.equals("connectCall")) {
-            Connection conn = MyConnectionService.getConnection();
+            Connection conn = ConnectionServiceCordova.getConnection();
             if(conn == null) {
                 this.callbackContext.error("No call exists for you to connect");
             } else if(conn.getState() == Connection.STATE_ACTIVE) {
@@ -213,14 +216,14 @@ public class CordovaCall extends CordovaPlugin {
             }
             return true;
         } else if (action.equals("endCall")) {
-            Connection conn = MyConnectionService.getConnection();
+            Connection conn = ConnectionServiceCordova.getConnection();
             if(conn == null) {
                 this.callbackContext.error("No call exists for you to end");
             } else {
                 DisconnectCause cause = new DisconnectCause(DisconnectCause.LOCAL);
                 conn.setDisconnected(cause);
                 conn.destroy();
-                MyConnectionService.deinitConnection();
+                ConnectionServiceCordova.deinitConnection();
                 ArrayList<CallbackContext> callbackContexts = CordovaCall.getCallbackContexts().get("hangup");
                 for (final CallbackContext cbContext : callbackContexts) {
                     cordova.getThreadPool().execute(new Runnable() {
@@ -241,7 +244,7 @@ public class CordovaCall extends CordovaPlugin {
             return true;
         } else if (action.equals("setAppName")) {
             String appName = args.getString(0);
-            handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(),MyConnectionService.class),appName);
+            handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(), ConnectionServiceCordova.class),appName);
             if(android.os.Build.VERSION.SDK_INT >= 26) {
               phoneAccount = new PhoneAccount.Builder(handle, appName)
                   .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
@@ -412,6 +415,61 @@ public class CordovaCall extends CordovaPlugin {
         permissionCounter--;
     }
 
+    private void checkKeyguard(){
+        //handles screen lock and asks the user to unlock it
+        KeyguardManager km = (KeyguardManager) cordovaInterface.getActivity().getSystemService(Context.KEYGUARD_SERVICE);
+        if (km.isKeyguardLocked()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                km.requestDismissKeyguard(cordovaInterface.getActivity(), new KeyguardManager.KeyguardDismissCallback() {
+                    @Override
+                    public void onDismissSucceeded() {
+                        boolean preferencesSaved = getSharedPreferences()
+                                .edit()
+                                .putBoolean(Constants.CALL_ANSWERED_BY_USER, true)
+                                .commit();
+                        if (!preferencesSaved){
+                            Log.e(TAG, "Error saving preferences. OutSystems won't start the call");
+                        } else {
+                            ArrayList<CallbackContext> callbackContexts = CordovaCall.getCallbackContexts().get("answer");
+
+                            if (callbackContexts != null) {
+                                for (final CallbackContext callbackContext : callbackContexts) {
+                                    CordovaCall.getCordova().getThreadPool().execute(new Runnable() {
+                                        public void run() {
+                                            PluginResult result = new PluginResult(PluginResult.Status.OK, "answer event called successfully");
+                                            result.setKeepCallback(true);
+                                            callbackContext.sendPluginResult(result);
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onDismissError() {
+                        super.onDismissError();
+
+                        Log.e(TAG, "DismissError!!!");
+                    }
+                });
+            } else {
+                cordovaInterface.getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|
+                        WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD|
+                        WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED|
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+
+                boolean preferencesSaved = getSharedPreferences()
+                        .edit()
+                        .putBoolean(Constants.CALL_ANSWERED_BY_USER, true)
+                        .commit();
+                if (!preferencesSaved){
+                    Log.e(TAG, "Error saving preferences. OutSystems won't start the call");
+                }
+            }
+        }
+    }
+
     private void receiveCall() {
         Bundle callInfo = new Bundle();
         callInfo.putString("from",from);
@@ -512,25 +570,6 @@ public class CordovaCall extends CordovaPlugin {
 		super.onDestroy();
 		PWLog.noise("OnDestroy");
 		sAppReady.set(false);
-	}
-
-	private JSONObject getPushFromIntent(Intent intent) {
-		if (null == intent)
-			return null;
-
-		if (intent.hasExtra(Pushwoosh.PUSH_RECEIVE_EVENT)) {
-			String pushString = intent.getExtras().getString(Pushwoosh.PUSH_RECEIVE_EVENT);
-			JSONObject pushObject = null;
-			try {
-				pushObject = new JSONObject(pushString);
-			} catch (JSONException e) {
-				PWLog.error(TAG, "Failed to parse push notification", e);
-			}
-
-			return pushObject;
-		}
-
-		return null;
 	}
 
 	private boolean onDeviceReady(JSONArray data, CallbackContext callbackContext) {
@@ -1134,4 +1173,9 @@ public class CordovaCall extends CordovaPlugin {
 
 		return true;
 	}
+
+    SharedPreferences getSharedPreferences(){
+        return cordovaInterface.getActivity().getSharedPreferences(Constants.PREFERENCES_FILE_NAME, Activity.MODE_PRIVATE);
+    }
+
 }

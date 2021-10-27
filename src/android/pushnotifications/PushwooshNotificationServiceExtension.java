@@ -1,43 +1,120 @@
 package com.dmarc.cordovacall;
 
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
+import android.app.Activity;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.telecom.Connection;
+import android.telecom.PhoneAccount;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
+import android.util.Log;
 
-import com.pushwoosh.internal.utils.PWLog;
-import com.pushwoosh.notification.NotificationServiceExtension;
-import com.pushwoosh.notification.PushMessage;
+import androidx.collection.ArrayMap;
 
-public class PushwooshNotificationServiceExtension extends NotificationServiceExtension {
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Map;
+
+public class PushwooshNotificationServiceExtension extends FirebaseMessagingService {
 	private boolean showForegroundPush;
+	private int permissionCounter = 0;
+	private String pendingAction;
+	private TelecomManager tm;
+	private PhoneAccountHandle handle;
+	private String from;
+	private static final String TAG = "PushwooshNotificSvExt";
 
 	public PushwooshNotificationServiceExtension() {
+
+	}
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+
+		String appName = CordovaCall.getApplicationName(getApplicationContext());
+		handle = new PhoneAccountHandle(new ComponentName(getApplicationContext(), ConnectionServiceCordova.class),appName);
+		tm = (TelecomManager)getApplicationContext().getSystemService(getApplicationContext().TELECOM_SERVICE);
+	}
+
+	@Override
+	public void onMessageReceived(RemoteMessage remoteMessage) {
+		super.onMessageReceived(remoteMessage);
+		Map<String, String> messageData = (ArrayMap<String, String>) remoteMessage.getData();
+
+		if (!messageData.containsKey("u")){
+			return;
+		}
 		try {
-			String packageName = getApplicationContext().getPackageName();
-			ApplicationInfo ai = getApplicationContext().getPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA);
+			JSONObject dataObj = new JSONObject(messageData.get("u"));
 
-			if (ai.metaData != null) {
-				showForegroundPush = ai.metaData.getBoolean("PW_BROADCAST_PUSH", false) || ai.metaData.getBoolean("com.pushwoosh.foreground_push", false);
+			boolean preferencesSaved = getSharedPreferences()
+					.edit()
+					.putString(Constants.MEETING_NUMBER, dataObj.getString(Constants.MEETING_NUMBER))
+					.putString(Constants.MEETING_PASSWORD, dataObj.getString(Constants.MEETING_PASSWORD))
+					.commit();
+
+			if (!preferencesSaved){
+				Log.e(TAG, "Error saving preferences. Unable to start call");
 			}
-		} catch (Exception e) {
-			PWLog.error(CordovaCall.TAG, "Failed to read AndroidManifest metaData", e);
+
+			Connection conn = ConnectionServiceCordova.getConnection();
+			if(conn != null) {
+				if(conn.getState() == Connection.STATE_ACTIVE) {
+					Log.e(TAG, "You can't receive a call right now because you're already in a call");
+				} else {
+					Log.e(TAG, "You can't receive a call right now");
+				}
+			} else {
+				from = dataObj.getString(Constants.DISPLAY_NAME);
+				permissionCounter = 2;
+				pendingAction = "receiveCall";
+				this.checkCallPermission();
+			}
+
+		} catch (JSONException e) {
+			e.printStackTrace();
 		}
-
-		PWLog.debug(CordovaCall.TAG, "showForegroundPush = " + showForegroundPush);
 	}
 
-	@Override
-	protected boolean onMessageReceived(final PushMessage pushMessage) {
-		String message = pushMessage.toJson().toString();
-		boolean result = true;
-		CordovaCall.messageReceived(message);
-		if(CordovaCall.isKilled()){
-			result = super.onMessageReceived(pushMessage);
+	private void checkCallPermission() {
+		if(permissionCounter >= 1) {
+			PhoneAccount currentPhoneAccount = tm.getPhoneAccount(handle);
+			if(currentPhoneAccount.isEnabled()) {
+				if(pendingAction == "receiveCall") {
+					this.receiveCall();
+				}
+			} else {
+				if(permissionCounter == 2) {
+					Intent phoneIntent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
+					phoneIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+					//this.cordova.getActivity().getApplicationContext().startActivity(phoneIntent);
+					startActivity(phoneIntent);
+				} else {
+					Log.e(TAG, "You need to accept phone account permissions in order to send and receive calls");
+					//this.callbackContext.error("You need to accept phone account permissions in order to send and receive calls");
+				}
+			}
 		}
-		return (!showForegroundPush && isAppOnForeground()) || result;
+		permissionCounter--;
 	}
 
-	@Override
-	protected void onMessageOpened(PushMessage pushMessage) {
-		CordovaCall.openPush(pushMessage.toJson().toString());
+	private void receiveCall() {
+		Bundle callInfo = new Bundle();
+		callInfo.putString("from",from);
+		tm.addNewIncomingCall(handle, callInfo);
+		permissionCounter = 0;
+		//this.callbackContext.success("Incoming call successful");
 	}
+
+	SharedPreferences getSharedPreferences(){
+		return getSharedPreferences(Constants.PREFERENCES_FILE_NAME, Activity.MODE_PRIVATE);
+	}
+
 }
