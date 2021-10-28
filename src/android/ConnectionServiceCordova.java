@@ -23,8 +23,6 @@ import android.util.Log;
 
 import java.util.ArrayList;
 
-import com.outsystems.experts.callkitzoomsample.MainActivity;
-
 public class ConnectionServiceCordova extends ConnectionService {
 
     private static String TAG = "ConnectionServiceCordova";
@@ -55,7 +53,8 @@ public class ConnectionServiceCordova extends ConnectionService {
                         Log.e(TAG, "Error saving preferences. OutSystems won't start the call");
                     }
                 }
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                ///Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                Intent intent = new Intent(getApplicationContext(), getMainActivity());
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
             }
@@ -201,5 +200,25 @@ public class ConnectionServiceCordova extends ConnectionService {
 
     SharedPreferences getSharedPreferences(){
         return getSharedPreferences(Constants.PREFERENCES_FILE_NAME, Activity.MODE_PRIVATE);
+    }
+
+    /** Gets the "Main class" for this app so we can start the activity
+     * without knowing the package e.g. com.outsystems.experts.project.MainActivity
+     * **/
+    Class getMainActivity(){
+        Class mainActivity;
+        Context context = getApplicationContext();
+        String  packageName = context.getPackageName();
+        Intent  launchIntent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        String  className = launchIntent.getComponent().getClassName();
+
+        try {
+            //loading the Main Activity to not import it in the plugin
+            mainActivity = Class.forName(className);
+            return mainActivity;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
