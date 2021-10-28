@@ -102,7 +102,6 @@
         <header-file src="src/ios/AppDelegate+CordovaCall.h" />
 
         <source-file src="src/ios/CordovaCall.m" />
-        <!--<source-file src="src/ios/AppDelegateCordovaCall.m" />-->
         <source-file src="src/ios/AppDelegate+CordovaCall.m" />
 
         <framework src="PushKit.framework" />

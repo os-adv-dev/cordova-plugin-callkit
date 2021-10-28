@@ -5,7 +5,14 @@
 
 NSString *meetingNumber;
 NSString *meetingPassword;
+NSUserDefaults* sharedPreferences;
 
+- (instancetype)init {
+    self = [super init];
+    sharedPreferences = [self sharedPreferencesWithName: @"UserPreferencesPluginPref"];
+    
+    return self;
+}
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
     
@@ -69,9 +76,10 @@ NSString *meetingPassword;
 {
     [action fulfill];
     UIApplication *application = [UIApplication sharedApplication];
-    [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"CallAnsweredByUser"];
-    [[NSUserDefaults standardUserDefaults] setValue:meetingNumber forKey:@"MeetingNumber"];
-    [[NSUserDefaults standardUserDefaults] setValue:meetingPassword forKey:@"MeetingPassword"];
+    
+    [sharedPreferences setBool:true forKey:@"CallAnsweredByUser"];
+    [sharedPreferences setValue:meetingNumber forKey:@"MeetingNumber"];
+    [sharedPreferences setValue:meetingPassword forKey:@"MeetingPassword"];
     
     if (application.applicationState == UIApplicationStateActive){
         CordovaCall *cordovaCall = [CordovaCall sharedInstance];
@@ -100,12 +108,18 @@ NSString *meetingPassword;
     }
     INPersonHandle *personHandle = contact.personHandle;
     NSString *callId = personHandle.value;
-    NSString *callName = [[NSUserDefaults standardUserDefaults] stringForKey:callId];
+    NSString *callName = [sharedPreferences stringForKey:callId];
     if(!callName) {
         callName = callId;
     }
     NSDictionary *intentInfo = @{ @"callName" : callName, @"callId" : callId, @"isVideo" : isVideo?@YES:@NO};
     [[NSNotificationCenter defaultCenter] postNotificationName:@"RecentsCallNotification" object:intentInfo];
     return YES;
+}
+
+- (NSUserDefaults *)sharedPreferencesWithName:(NSString *)aName
+{
+    id _Nullable name = [aName isEqualToString:@""] ? nil : aName;
+    return [[NSUserDefaults alloc] initWithSuiteName:name];
 }
 @end
