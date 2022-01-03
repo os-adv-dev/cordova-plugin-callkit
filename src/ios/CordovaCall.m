@@ -48,6 +48,7 @@ static CordovaCall* sharedInstance;
     [callbackIds setObject:[NSMutableArray array] forKey:@"answer"];
     [callbackIds setObject:[NSMutableArray array] forKey:@"reject"];
     [callbackIds setObject:[NSMutableArray array] forKey:@"hangup"];
+    [callbackIds setObject:[NSMutableArray array] forKey:@"canceled"];
     [callbackIds setObject:[NSMutableArray array] forKey:@"sendCall"];
     [callbackIds setObject:[NSMutableArray array] forKey:@"receiveCall"];
     [callbackIds setObject:[NSMutableArray array] forKey:@"mute"];
@@ -494,6 +495,14 @@ static CordovaCall* sharedInstance;
         [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
     }
     //[action fail];
+}
+- (void) callCanceledCallbacks{
+    for (id callbackId in callbackIds[@"canceled"]) {
+        CDVPluginResult* pluginResult = nil;
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"canceled event called successfully"];
+        [pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+    }
 }
 
 - (void) callAnswerCallbacks{

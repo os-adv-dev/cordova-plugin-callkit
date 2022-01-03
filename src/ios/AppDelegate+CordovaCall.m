@@ -5,6 +5,7 @@
 
 NSString *meetingNumber;
 NSString *meetingPassword;
+NSUUID *callUUID;
 NSUserDefaults* sharedPreferences;
 
 - (instancetype)init {
@@ -27,10 +28,8 @@ NSUserDefaults* sharedPreferences;
     
     meetingNumber = [data objectForKey:@"MeetingNumber"];
     meetingPassword = [data objectForKey:@"MeetingPassword"];
-    NSString *displayName = [data objectForKey:@"DisplayName"];
-    
-    NSUUID *callUUID = [[NSUUID alloc] init];
-    
+    NSString *displayName = [data objectForKey:@"DisplayName"];  
+       
     CXHandle *handle = [[CXHandle alloc] initWithType:CXHandleTypePhoneNumber value:meetingNumber];
     CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
     callUpdate.remoteHandle = handle;
@@ -62,6 +61,20 @@ NSUserDefaults* sharedPreferences;
     }
     
     [provider setDelegate:self queue:nil];
+
+    if (![[data objectForKey:@"isEndCall"] isKindOfClass:NSNull.class]) {
+        if ([[data objectForKey:@"isEndCall"] boolValue]) {
+            [provider reportCallWithUUID:callUUID endedAtDate:NSDate.date reason:CXCallEndedReasonRemoteEnded];
+            if(application.applicationState == UIApplicationStateActive){
+                CordovaCall *cordovaCall = [CordovaCall sharedInstance];
+                [cordovaCall callCanceledCallbacks];
+            }
+            return;
+        }
+    }
+
+    callUUID = [[NSUUID alloc] init];
+    
     [provider reportNewIncomingCallWithUUID:callUUID update:callUpdate completion:^(NSError * _Nullable error) {
         if(error == nil) {
             NSLog(@"Phone is ringing!");

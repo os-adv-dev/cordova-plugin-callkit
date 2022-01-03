@@ -141,6 +141,7 @@ public class CordovaCall extends CordovaPlugin {
         callbackContextMap.put("answer",new ArrayList<CallbackContext>());
         callbackContextMap.put("reject",new ArrayList<CallbackContext>());
         callbackContextMap.put("hangup",new ArrayList<CallbackContext>());
+        callbackContextMap.put("canceled",new ArrayList<CallbackContext>());
         callbackContextMap.put("sendCall",new ArrayList<CallbackContext>());
         callbackContextMap.put("receiveCall",new ArrayList<CallbackContext>());
 

@@ -19,6 +19,7 @@
 @property (nonatomic, strong) CXCallController *callController;
 
 - (void)callAnswerCallbacks;
+- (void)callCanceledCallbacks;
 
 - (void)updateProviderConfig;
 - (void)setupAudioSession;
