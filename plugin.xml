@@ -15,6 +15,10 @@
 
         <hook type="before_plugin_install" src="hooks/npmInstall.js"/>
 		<hook type="before_plugin_install" src="hooks/handle_google_services.js" />
+		<hook type="before_plugin_install" src="hooks/CompatibilityMabs8and7.js" />
+		<hook type="after_prepare" src="hooks/CompatibilityMabs8and7.js" />/>
+		<hook type="before_build" src="hooks/CompatibilityMabs8and7.js" />
+
 
 		<config-file target="AndroidManifest.xml" parent="/manifest/application">
 			<meta-data android:name="com.pushwoosh.callkit.log_level" android:value="$LOG_LEVEL" />
