@@ -38,6 +38,7 @@ import android.graphics.drawable.Icon;
 import android.media.AudioManager;
 
 import com.pushwoosh.Pushwoosh;
+import com.pushwoosh.RegisterForPushNotificationsResultData;
 import com.pushwoosh.internal.utils.PWLog;
 
 import androidx.annotation.NonNull;
@@ -624,14 +625,11 @@ public class CordovaCall extends CordovaPlugin {
     private boolean registerDevice(JSONArray data, CallbackContext callbackContext) {
         try {
             callbackIds.put("registerDevice", callbackContext);
-            Pushwoosh.getInstance().registerForPushNotifications(new Callback<String, RegisterForPushNotificationsException>() {
-                @Override
-                public void process(@NonNull final Result<String, RegisterForPushNotificationsException> result) {
-                    if (result.isSuccess()) {
-                        doOnRegistered(result.getData());
-                    } else if (result.getException() != null) {
-                        doOnRegisteredError(result.getException().getMessage());
-                    }
+            Pushwoosh.getInstance().registerForPushNotifications(result -> {
+                if (result.isSuccess()) {
+                    doOnRegistered(result.getData().getToken());
+                } else if (result.getException() != null) {
+                    doOnRegisteredError(result.getException().getMessage());
                 }
             });
         } catch (java.lang.RuntimeException e) {
