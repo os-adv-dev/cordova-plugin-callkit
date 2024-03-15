@@ -83,9 +83,9 @@
 		<framework src="com.pushwoosh:pushwoosh:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-badge:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-inbox:5.17.2"/>
-		<framework src="com.pushwoosh:pushwoosh-inbox-ui:5.17.2"/>
+		<framework src="com.pushwoosh:pushwoosh-inbox-ui:5.17.2"/>-->
 		<framework src="src/android/googleservices-build.gradle" custom="true" type="gradleReference" />
-        -->
+        
     </platform>
 
     <platform name="ios">
