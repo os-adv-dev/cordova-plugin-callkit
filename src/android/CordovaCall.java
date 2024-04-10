@@ -4,6 +4,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.PermissionHelper;
 import org.apache.cordova.PluginResult;
 
 import android.app.Activity;
@@ -25,6 +26,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.Manifest;
 import android.telecom.Connection;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,7 +40,6 @@ import android.graphics.drawable.Icon;
 import android.media.AudioManager;
 
 import com.pushwoosh.Pushwoosh;
-import com.pushwoosh.RegisterForPushNotificationsResultData;
 import com.pushwoosh.internal.utils.PWLog;
 
 import androidx.annotation.NonNull;
@@ -52,7 +53,6 @@ import com.pushwoosh.GDPRManager;
 import com.pushwoosh.badge.PushwooshBadge;
 import com.pushwoosh.exception.GetTagsException;
 import com.pushwoosh.exception.PushwooshException;
-import com.pushwoosh.exception.RegisterForPushNotificationsException;
 import com.pushwoosh.exception.UnregisterForPushNotificationException;
 import com.pushwoosh.function.Callback;
 import com.pushwoosh.function.Result;
@@ -69,6 +69,8 @@ import com.pushwoosh.tags.Tags;
 import com.pushwoosh.tags.TagsBundle;
 
 public class CordovaCall extends CordovaPlugin {
+
+    private static final int PERMISSION_REQUEST_CODE = 100;
 
     public static String TAG = "CordovaCall";
     public static final int CALL_PHONE_REQ_CODE = 0;
@@ -124,29 +126,70 @@ public class CordovaCall extends CordovaPlugin {
         cordovaInterface = cordova;
         cordovaWebView = webView;
         super.initialize(cordova, webView);
+
         appName = getApplicationName(this.cordova.getActivity().getApplicationContext());
-        handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(), ConnectionServiceCordova.class),appName);
-        tm = (TelecomManager)this.cordova.getActivity().getApplicationContext().getSystemService(this.cordova.getActivity().getApplicationContext().TELECOM_SERVICE);
-        if(Build.VERSION.SDK_INT >= 26) {
-            phoneAccount = new PhoneAccount.Builder(handle, appName)
-                    .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
-                    .build();
-            tm.registerPhoneAccount(phoneAccount);
+        handle = new PhoneAccountHandle(new ComponentName(this.cordova.getActivity().getApplicationContext(), ConnectionServiceCordova.class), appName);
+        tm = (TelecomManager) this.cordova.getActivity().getApplicationContext().getSystemService(this.cordova.getActivity().getApplicationContext().TELECOM_SERVICE);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            requestPhonePermissions();
+        } else {
+            initPhoneAccountTelecomManager();
         }
-        if(Build.VERSION.SDK_INT >= 23) {
-            phoneAccount = new PhoneAccount.Builder(handle, appName)
-                    .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
-                    .build();
-            tm.registerPhoneAccount(phoneAccount);
-        }
-        callbackContextMap.put("answer",new ArrayList<CallbackContext>());
-        callbackContextMap.put("reject",new ArrayList<CallbackContext>());
-        callbackContextMap.put("hangup",new ArrayList<CallbackContext>());
-        callbackContextMap.put("canceled",new ArrayList<CallbackContext>());
-        callbackContextMap.put("sendCall",new ArrayList<CallbackContext>());
-        callbackContextMap.put("receiveCall",new ArrayList<CallbackContext>());
+
+        callbackContextMap.put("answer", new ArrayList<CallbackContext>());
+        callbackContextMap.put("reject", new ArrayList<CallbackContext>());
+        callbackContextMap.put("hangup", new ArrayList<CallbackContext>());
+        callbackContextMap.put("canceled", new ArrayList<CallbackContext>());
+        callbackContextMap.put("sendCall", new ArrayList<CallbackContext>());
+        callbackContextMap.put("receiveCall", new ArrayList<CallbackContext>());
 
         instance = this;
+    }
+
+    private void initPhoneAccountTelecomManager() {
+        boolean isSelfManagerDevice = hasSelfManagedPhoneAccount(this.cordova.getContext());
+        System.out.println("--- 📱 --- isSelfManagerDevice :: " + isSelfManagerDevice);
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            phoneAccount = new PhoneAccount.Builder(handle, appName)
+                    .setCapabilities(isSelfManagerDevice ? PhoneAccount.CAPABILITY_SELF_MANAGED : PhoneAccount.CAPABILITY_CALL_PROVIDER)
+                    .build();
+            tm.registerPhoneAccount(phoneAccount);
+        }
+        if (Build.VERSION.SDK_INT >= 23) {
+            phoneAccount = new PhoneAccount.Builder(handle, appName)
+                    .setCapabilities(isSelfManagerDevice ? PhoneAccount.CAPABILITY_SELF_MANAGED : PhoneAccount.CAPABILITY_CALL_PROVIDER)
+                    .build();
+            tm.registerPhoneAccount(phoneAccount);
+        }
+    }
+
+    public boolean hasSelfManagedPhoneAccount(Context context) {
+        TelecomManager telecomManager = (TelecomManager) context.getSystemService(Context.TELECOM_SERVICE);
+        if (telecomManager != null) {
+            for (PhoneAccountHandle phoneAccountHandle : telecomManager.getCallCapablePhoneAccounts()) {
+                PhoneAccount phoneAccount = telecomManager.getPhoneAccount(phoneAccountHandle);
+                if (phoneAccount != null && phoneAccount.hasCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void requestPhonePermissions() {
+        String[] permissions = {
+                android.Manifest.permission.READ_PHONE_NUMBERS,
+                android.Manifest.permission.READ_PHONE_STATE,
+                android.Manifest.permission.MANAGE_OWN_CALLS,
+        };
+
+        if (PermissionHelper.hasPermission(this, permissions[0]) && PermissionHelper.hasPermission(this, permissions[1]) && PermissionHelper.hasPermission(this, permissions[2])) {
+            initPhoneAccountTelecomManager();
+        } else {
+            PermissionHelper.requestPermissions(this, PERMISSION_REQUEST_CODE, permissions);
+        }
     }
 
     @Override
@@ -554,6 +597,9 @@ public class CordovaCall extends CordovaPlugin {
                 break;
             case REAL_PHONE_CALL:
                 this.callNumber();
+                break;
+            case PERMISSION_REQUEST_CODE:
+                initPhoneAccountTelecomManager();
                 break;
         }
     }
