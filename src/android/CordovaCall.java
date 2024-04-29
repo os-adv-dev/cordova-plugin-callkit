@@ -179,16 +179,36 @@ public class CordovaCall extends CordovaPlugin {
     }
 
     private void requestPhonePermissions() {
-        String[] permissions = {
+       String[] permissions = {
                 android.Manifest.permission.READ_PHONE_NUMBERS,
                 android.Manifest.permission.READ_PHONE_STATE,
                 android.Manifest.permission.MANAGE_OWN_CALLS,
+                android.Manifest.permission.BLUETOOTH_SCAN,
+                android.Manifest.permission.BLUETOOTH_CONNECT
         };
 
-        if (PermissionHelper.hasPermission(this, permissions[0]) && PermissionHelper.hasPermission(this, permissions[1]) && PermissionHelper.hasPermission(this, permissions[2])) {
-            initPhoneAccountTelecomManager();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (PermissionHelper.hasPermission(this, permissions[0]) &&
+                    PermissionHelper.hasPermission(this, permissions[1]) &&
+                    PermissionHelper.hasPermission(this, permissions[2]) &&
+                    PermissionHelper.hasPermission(this, permissions[3]) &&
+                    PermissionHelper.hasPermission(this, permissions[4])) {
+                initPhoneAccountTelecomManager();
+            } else {
+                PermissionHelper.requestPermissions(this, PERMISSION_REQUEST_CODE, permissions);
+            }
         } else {
-            PermissionHelper.requestPermissions(this, PERMISSION_REQUEST_CODE, permissions);
+            if (PermissionHelper.hasPermission(this, permissions[0]) &&
+                    PermissionHelper.hasPermission(this, permissions[1]) &&
+                    PermissionHelper.hasPermission(this, permissions[2])) {
+                initPhoneAccountTelecomManager();
+            } else {
+                PermissionHelper.requestPermissions(this, PERMISSION_REQUEST_CODE, new String[]{
+                        android.Manifest.permission.READ_PHONE_NUMBERS,
+                        android.Manifest.permission.READ_PHONE_STATE,
+                        android.Manifest.permission.MANAGE_OWN_CALLS
+                });
+            }
         }
     }
 
@@ -672,7 +692,7 @@ public class CordovaCall extends CordovaPlugin {
         try {
             callbackIds.put("registerDevice", callbackContext);
             Pushwoosh.getInstance().registerForPushNotifications(result -> {
-                if (result.isSuccess()) {
+                if (result.isSuccess() && result.getData() != null) {
                     doOnRegistered(result.getData().getToken());
                 } else if (result.getException() != null) {
                     doOnRegisteredError(result.getException().getMessage());
