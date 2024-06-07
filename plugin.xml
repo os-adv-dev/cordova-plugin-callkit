@@ -14,7 +14,7 @@
 	    <preference name="ANDROID_FOREGROUND_PUSH" default="false" />
 
         <hook type="before_plugin_install" src="hooks/npmInstall.js"/>
-		<hook type="before_plugin_install" src="hooks/handle_google_services.js" />
+		<!--<hook type="before_plugin_install" src="hooks/handle_google_services.js" />-->
 		<hook type="before_plugin_install" src="hooks/CompatibilityMabs8and7.js" />
 		<hook type="after_prepare" src="hooks/CompatibilityMabs8and7.js" />/>
 		<hook type="before_build" src="hooks/CompatibilityMabs8and7.js" />
@@ -79,17 +79,18 @@
 		<framework src="com.github.bumptech.glide:glide:4.7.1" />
 		<framework src="org.jetbrains.kotlin:kotlin-stdlib-jre7:1.1.60" />
 
-        <framework src="com.pushwoosh:pushwoosh:6.7.5"/>
+        <!--<framework src="com.pushwoosh:pushwoosh:6.7.5"/>
         <framework src="com.pushwoosh:pushwoosh-badge:6.7.5"/>
         <framework src="com.pushwoosh:pushwoosh-inbox:6.7.5"/>
-        <framework src="com.pushwoosh:pushwoosh-inbox-ui:6.7.5"/>
+        <framework src="com.pushwoosh:pushwoosh-inbox-ui:6.7.5"/>-->
         <!--
 		<framework src="com.pushwoosh:pushwoosh:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-badge:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-inbox:5.17.2"/>
 		<framework src="com.pushwoosh:pushwoosh-inbox-ui:5.17.2"/>-->
-		<framework src="src/android/googleservices-build.gradle" custom="true" type="gradleReference" />
+		<!--<framework src="src/android/googleservices-build.gradle" custom="true" type="gradleReference" />-->
         
+        <dependency id="pushwoosh-cordova-plugin" url="https://github.com/Pushwoosh/pushwoosh-phonegap-plugin#8.3.27-OS"/>
     </platform>
 
     <platform name="ios">
