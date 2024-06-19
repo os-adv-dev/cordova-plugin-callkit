@@ -59,6 +59,7 @@ public class FirebaseNotificationServiceExtension extends FirebaseMessagingServi
 		Map<String, String> messageData = (ArrayMap<String, String>) remoteMessage.getData();
 
 		if (!messageData.containsKey("u")) {
+			PushwooshFcmHelper.onMessageReceived(this, remoteMessage);
 			return;
 		}
 		try {
