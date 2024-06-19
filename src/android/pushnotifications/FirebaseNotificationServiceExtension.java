@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat;
 
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.pushwoosh.firebase.PushwooshFcmHelper;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
