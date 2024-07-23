@@ -156,8 +156,7 @@ public class CordovaCall extends CordovaPlugin {
                     .setCapabilities(isSelfManagerDevice ? PhoneAccount.CAPABILITY_SELF_MANAGED : PhoneAccount.CAPABILITY_CALL_PROVIDER)
                     .build();
             tm.registerPhoneAccount(phoneAccount);
-        }
-        if (Build.VERSION.SDK_INT >= 23) {
+        } else if (Build.VERSION.SDK_INT >= 23) {
             phoneAccount = new PhoneAccount.Builder(handle, appName)
                     .setCapabilities(isSelfManagerDevice ? PhoneAccount.CAPABILITY_SELF_MANAGED : PhoneAccount.CAPABILITY_CALL_PROVIDER)
                     .build();
